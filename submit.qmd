@@ -1,28 +1,385 @@
 ---
-title: ""
-author: ""
-format:
+title: "The effects of vaccination and boosters on COVID-19 Mortality"
+author: "Katrina"
+format: 
   html:
-    embed-resources: true
+   embed-resources: true
 ---
 
-## Quarto
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+#Load necessary libraries
 
-## Running Code
+library(tidyverse)
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+library(lubridate)
 
-```{r}
-1 + 1
+library(Amelia)
+
+library(leaflet)
+
+library(psych)
+
+library(knitr)
+
+library(tidycensus)
+
+library(ggplot2)
+
 ```
 
-You can add options to executable code like this
+## INTRODUCTION
 
-```{r}
-#| echo: false
-2 * 2
+The COVID-19 pandemic, caused by the novel coronavirus SARS-CoV-2, has undoubtedly been one of the most transformative global events in recent history. Since its emergence in late 2019, the virus has had far-reaching consequences, affecting every facet of human life, from public health to the economy, and from social interactions to scientific advancements. Central to the ongoing response to this pandemic has been the development and deployment of vaccines, which represent a critical tool in mitigating the spread of the virus and reducing its associated morbidity and mortality.\
+\
+This study is dedicated to examining the mortality rate of COVID-19 before the introduction of vaccines, after the vaccine's initial rollout, following the administration of the first booster shot, and post-implementation of the second booster shot. We seek to examine
+
+"How have mortality rates for COVID-19, pneumonia, and their combination evolved across different time periods, specifically before the vaccine (prior to December 2020), after the introduction of the vaccine and before the first booster (December 2020 - October 2021), and after the introduction of the vaccine and before the second booster (October 2021 - April 2022) and after the second booster (April 2022-present)?"\
+\
+
+This research aims to examine the impact of vaccination and booster shots on mortality rates, both for COVID-19 and pneumonia, and to understand the interplay between these variables over time. By conducting a comprehensive analysis of these parameters, we aim to gain deeper insights into the evolving impact of COVID-19 and the effectiveness of vaccination strategies in averting severe outcomes. Such insights are essential for guiding public health policies and interventions to better manage this ongoing crisis.
+
+## METHODS
+
+### **Data Sources and Preparation**
+
+1.  Three primary datasets were employed for this study: "All_state_data", "Vaccination_data", and "Provisional_COVID-19_Death_Counts_by_Week_Ending_Date_and_State_20231022". These datasets contain relevant information concerning COVID-19 cases, deaths, vaccination rates, and other related variables.\
+    \
+    Selection of Variables: Specific variables of interest were identified in each dataset. These variables included data related to COVID-19 cases, deaths, vaccination coverage, and date information.
+
+2.  Data Merging: The first two datasets were merged into a new dataset, herein referred to as "Final_data." The merge operation was performed using common identifiers to align data points between the two sources.
+
+3.  Date Format Transformation: Within the "All_state_data_select" dataset, the date column was initially in character format. To facilitate data analysis, the date information was converted to Date objects using the "as.Date()" function, with the appropriate date format specified.
+
+4.  Duplicate Data Handling: Duplicate rows within the "Final_data" dataset were checked and removed, ensuring data integrity and consistency.The third dataset, "Provisional_COVID 19_Death_Counts_by_Week_Ending_Date_and_State_20231022", contains information on both the deaths caused by COVID-19 as well as by Pneuomina.
+
+#### Defining Time Periods
+
+\
+The study investigated mortality rates during the following time periods:\
+\
+1. Before the Vaccine (Before December 2020): This period represents the initial phase of the pandemic when vaccines were not yet widely available.\
+\
+2. After the Introduction of the Vaccine and Before the First Booster (December 2020 - October 2021): This period signifies the time when vaccines were introduced and administered but before the introduction of booster shots.\
+\
+3. After the Introduction of the Vaccine and Before the Second Booster (October 2021 - April 2022): This period captures the time following the introduction of the vaccine and the administration of the first booster dose but preceding the second booster shot.
+
+4\. After the Second Booster (April 2022-present): This period captures the time following the administration of the second booster shot.\
+
+#### Mortality Rate Calculation
+
+\
+The mortality rate was calculated as the total number of deaths per month within each of the specified time periods. It was assessed separately for COVID-19, pneumonia, and the combined incidence of COVID-19 and pneumonia. These calculations were vital in understanding how mortality rates evolved over time in response to vaccination strategies and other factors.\
+\
+This comprehensive analysis is designed to shed light on the changing dynamics of COVID-19 mortality and the impact of vaccination efforts during various phases of the pandemic.\
+
+#### Data Analysis
+
+\
+The analysis was conducted using the R programming language, with specific libraries and packages employed for data manipulation and visualization. The following methods were utilized for data analysis:\
+\
+Data Manipulation: The "dplyr" package was utilized for data manipulation, including operations such as filtering, summarization, and aggregation. This allowed for the selection of data relevant to specific time periods.\
+\
+Plot Generation: The "ggplot2" package was used to generate various plots that visually represent the mortality rates during distinct periods of time. These plots provided a clear visualization of trends and variations in mortality rates.
+
+## RESULTS
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+### Import the dataset
+
+All_state_data <- read_csv("all-states-history.csv")
+
+Vaccination_data <-  read_csv("covid19_vaccinations_in_the_united_states.csv")
+
+#Select the variable
+
+All_state_data_select<-All_state_data[, c("date","state","death","hospitalized","negative","positive")]
+
+Vaccination_data_select<-Vaccination_data[, c("Jurisdiction (State/Territory) or Federal Entity", "Latitude", "Longitude" ,"Total doses distributed","Residents with at least one dose","Percent of total pop with at least one dose"  )]
+
+# Convert character dates to Date objects
+
+All_state_data_select$date <- as.Date(All_state_data_select$date, format = "%d/%m/%Y")
+
+#rename the column
+
+colnames(Vaccination_data_select)[colnames(Vaccination_data_select) == "Jurisdiction (State/Territory) or Federal Entity"] <- "state"
+
+#Merge two datasets
+
+Final_data <- merge(All_state_data_select, Vaccination_data_select, by = "state", all.x = TRUE)
+
+#Check duplicate rows
+
+duplicate_row <- sum(duplicated(Final_data))
+
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+Consider descriptive statistics, such as mean, median, minimum, maximum, and quartiles, provide a summary overview of the numeric variables. Below table give those results,
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+## Select numerical variables
+
+numeric_variables <- Final_data[, c("death", "hospitalized", "negative","positive","Total doses distributed","Residents with at least one dose","Percent of total pop with at least one dose")]
+
+#Descriptive summary
+
+summary_table<-describe(numeric_variables)
+
+kable(summary_table, format = "markdown", align = "c", caption = "Summary of Numeric Variables")
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+Deaths_date <- Final_data %>%
+
+  group_by(date) %>%
+
+  summarize(TotalDeaths = sum(death, na.rm = TRUE))
+
+ggplot(Deaths_date, aes(x = date, y = TotalDeaths)) +
+
+  geom_line(color = "blue") +
+
+  labs(title = "Total Deaths Over Time",
+
+       x = "Date",
+
+       y = "Total Deaths") +
+
+  theme_minimal()
+
+```
+
+The above time series plot visually represents the progression of total deaths over the specified time period.The positive trend in COVID-19 cases observed throughout the 2020-2021 time range underscores the importance of proactive and adaptive public health measures. Data reveals a continuous rise in the number of COVID-19 cases throughout 2021. This upward trajectory is indicative of the virus's persistent spread within the population.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+color_palette <- colorNumeric(palette = "viridis", domain = Final_data$death)
+
+leaflet(data = Final_data) %>%
+
+  addTiles() %>%
+
+  addCircleMarkers(
+
+    lng = ~Longitude,  
+
+    lat = ~Latitude,  
+
+    radius =4, 
+
+    color = ~color_palette(death),
+
+    fillOpacity = 0.6,  
+
+    popup = ~paste("State: ", state, "<br>Deaths: ", death)
+
+  ) %>%
+
+  setView(lng = -120, lat = 37, zoom = 3) %>%
+
+  addLegend(pal = color_palette, values = ~death, opacity = 1, title = "Deaths", position = "bottomright")
+
+```
+
+Consider the geographical distribution of vaccination process
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+color_palettenew <- colorNumeric(palette = "viridis", domain = Vaccination_data_select$`Residents with at least one dose`)
+
+leaflet(data = Vaccination_data_select) %>%
+
+  addTiles() %>%
+
+  addCircleMarkers(
+
+    lng = ~Longitude,  
+
+    lat = ~Latitude,  
+
+    radius = 4,  
+
+    color = ~color_palettenew(`Residents with at least one dose`),  
+
+    fillOpacity = 0.6,  
+
+    popup = ~paste("State: ", state, "<br>Total_vaccinated: ", `Residents with at least one dose`)  
+
+  ) %>%
+
+  setView(lng = -120, lat = 37, zoom = 3)%>%
+
+  addLegend(pal = color_palettenew, values = ~`Residents with at least one dose`, opacity = 1, title = "Residents with at least one dose", position = "bottomright")
+
+```
+
+Above Leaflet maps visualizes COVID-19 deaths and vaccianation counts across states. Circle markers represent each state, with their color indicating the number of deaths and number of residents with at least one dose. Darker colors represent higher numbers of deaths. The maps give a intuitive geographic interpretation of the COVID-19 impact across states.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+All_state_data <- read_csv("Provisional_COVID-19_Death_Counts_by_Week_Ending_Date_and_State_20231022.csv")
+
+colnames(All_state_data)[10] ="COVIDDeaths"
+colnames(All_state_data)[3] ="EndDate"
+
+GroupBy_Year_State_Data <- filter( All_state_data, Group == "By Year" & State != "United States")
+
+##Add the abbreviated state (lower case) column
+GroupBy_Year_State_Data["state"] <- state.abb[match(GroupBy_Year_State_Data$State, state.name)]
+
+
+state_data <- GroupBy_Year_State_Data %>%
+
+  group_by(state) %>%
+
+  summarise(TotalDeaths = sum(COVIDDeaths, na.rm = TRUE)) %>%
+
+  ungroup()
+
+
+##state_data <- Final_data %>%
+##  group_by(state) %>%
+##  summarise(TotalDeaths = sum(death, na.rm = TRUE),
+##            TotalVaccinations = max(`Residents with at least one dose`, na.rm = TRUE)) %>%
+##  ungroup()
+
+#  top 10 countries with the highest number of deaths
+
+top_10_state <- state_data %>%
+
+  arrange(desc(TotalDeaths)) %>%
+
+  head(10)
+
+kable(top_10_state, format = "markdown", align = "c", caption = "Top ten states reported maximum deaths")
+
+```
+
+Above table represents the top ten states with the maximum reported deaths due to COVID-19. The columns include state, TotalDeaths (the total number of reported deaths in each state), and TotalVaccinations (the maximum number of residents with at least one vaccine dose in each state).New York (NY) has the highest number of reported deaths, totaling 8854467, followed by California (CA) with 5733089 deaths.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+##Vaccination_plot<- ggplot(top_10_state, aes(x = reorder(state, -TotalVaccinations), y = ##TotalVaccinations, fill = state)) +
+##
+##  geom_bar(stat = "identity") +
+##
+##  labs(title = "Top 10 states by Total Vaccinations",
+##
+##       x = "States",
+##
+##       y = "Total Vaccinations") +
+##
+##  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+##
+##Vaccination_plot
+
+
+Death_plot<- ggplot(top_10_state, aes(x = reorder(state, -TotalDeaths), y = TotalDeaths, fill = state)) +geom_bar(stat = "identity") +
+
+  labs(title = "Top 10 states by Total Deaths",
+
+       x = "States",
+
+       y = "Total Deaths") +
+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+Death_plot
+
+```
+
+Above plot visually compares the top 10 states in the USA based on the total number of COVID-19 vaccinations administered.California (CA) has the highest total vaccinations, followed by New York (NY) and Texas (TX). Although New York (NY) has the highest total deaths, followed by California (CA) and New Jersey (NJ).
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+GroupBy_Year_Data <- filter( All_state_data, Group == "By Year" & State == "United States")
+
+GroupBy_Month_Data <- filter( All_state_data, Group == "By Month" & State == "United States")
+
+GroupBy_Month_Data["Month2"] <- str_pad(GroupBy_Month_Data$Month, width=2, side=c("left"), pad="0")
+
+GroupBy_Month_Data["YearMonth"] <- str_replace_all( paste(GroupBy_Month_Data$Year, "_", GroupBy_Month_Data$Month2  ), " ", "")
+
+GroupBy_Month_Data <- GroupBy_Month_Data[,c("EndDate","Group","Year","Month", "Month2","YearMonth", "State", "COVIDDeaths", "Pneumonia Deaths", "Pneumonia and COVID-19 Deaths")]
+
+##Chagne Column names - removing spaces for easy coding
+colnames(GroupBy_Month_Data)[9] ="PneumoniaDeaths"
+
+colnames(GroupBy_Month_Data)[10] ="PneumoniaAndCovidDeaths"
+
+
+##Adding vertical line
+
+ggplot(GroupBy_Month_Data, aes(x=YearMonth, y=COVIDDeaths)) +  geom_bar(stat = "identity") + theme(axis.text.x=element_text(angle = -90, hjust = 0)) + geom_vline(xintercept = c("2020_12"), linetype="solid", size = 2, color = "red") + geom_vline(xintercept = c("2021_09"), linetype="solid", size = 2, color = "blue") + geom_vline(xintercept = c("2022_04"), linetype="solid", size = 2, color = "green") + geom_vline(xintercept = c("2022_11"), linetype="solid", size = 2, color = "purple") + labs(title = "Number of Total Deaths in the US Before and After Vaccination") + geom_text(aes(x="2020_12", label="\nVaccine available", y=75000), colour="red", angle=90) + geom_text(aes(x="2021_09", label="\nBooster 1", y=98000), colour="blue", angle=90)  + geom_text(aes(x="2022_04", label="\nBooster 2", y=98000), colour="green", angle=90) + geom_text(aes(x="2022_11", label="\nBooster 3", y=98000), colour="purple", angle=90)
+
+## Find the death sum of each period
+
+Before_Vac_Data <- filter (GroupBy_Month_Data, (Year == 2020 & (Month <= 11)) )
+Vac_to_B1_Data <- filter (GroupBy_Month_Data, (Year == 2020 & (Month == 12)) | (Year == 2021  & (Month <= 9)) )
+B1_to_B2_Data <- filter (GroupBy_Month_Data, (Year == 2021 & (Month >= 10)) | (Year == 2022  & (Month <= 4)) )
+B2_to_B3_Data <- filter (GroupBy_Month_Data, Year == 2022  & (Month >= 5 & Month <= 10) )
+B3_to_B4_Data <- filter (GroupBy_Month_Data, (Year == 2022 & (Month >= 11)) | (Year == 2023  & (Month <= 10)) )
+
+MyLabel <- c("Before Vaccines"," Vaccine To Booster 1","Booster 1 to Booster 2","Booster 2 to Booster 3","After Booster 3")
+
+MonthYearLabel <- c("2020_01 to 2020_11","2020_12 to 2021_09","2021_10 to 2022_04","2022_04 to 2022_10", "2022_11 to 2023_10")
+
+DeathsByPeriod <- c(sum(Before_Vac_Data$COVIDDeaths), sum(Vac_to_B1_Data$COVIDDeaths), sum(B1_to_B2_Data$COVIDDeaths), sum(B2_to_B3_Data$COVIDDeaths), sum(B3_to_B4_Data$COVIDDeaths))
+
+NumberOfMonths <- c(7,10,7,6, 11)
+
+PeriodData <- data.frame(MyLabel, MonthYearLabel, DeathsByPeriod, NumberOfMonths)
+
+##This is where we calculate the Mortality Rate
+PeriodData["Mortality"] <- PeriodData$DeathsByPeriod / PeriodData$NumberOfMonths
+
+
+ggplot(PeriodData, aes(x=MonthYearLabel, y=Mortality)) +  geom_bar(stat = "identity") + theme(axis.text.x=element_text(angle = -90, hjust = 0)) 
+
+
+```
+
+Notice: One would expect that the second period - from the time the vaccination first become available to the first booster shot - as well as the third period betwen the 1st and 2nd booster - to have low number of deaths; however, the height of COVID was right around that time. That's why it took some time for the effectiveness of the COVID vaccines to kick in. The significant death number drop is apparent six months after the second booster. The number of deaths keep getting lower after that.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+## ------------------------- Create stacked bar graph -------------------
+
+
+ThreeDeaths_Data <- GroupBy_Month_Data[,c("YearMonth", "COVIDDeaths", "PneumoniaDeaths", "PneumoniaAndCovidDeaths")]
+
+
+##ThreeDeaths_Data.plot.bar(x='YearMonth', stacked=True, title='The number of Deaths: Covid, Pneumonia, CovidAndPneumonia')
+
+library(plotly)
+
+fig <- plot_ly(ThreeDeaths_Data, x = ~YearMonth, y = ~COVIDDeaths, type = 'bar', name = 'COVIDDeaths')
+fig <- fig %>% add_trace(y = ~PneumoniaDeaths, name = 'PneumoniaDeaths')
+fig <- fig %>% add_trace(y = ~PneumoniaAndCovidDeaths, name = 'PneumoniaAndCovidDeaths')
+fig <- fig %>% layout(yaxis = list(title = 'Count'), barmode = 'stack')
+
+fig
+
+```
+
+There is a strong correlation between the number of COVID deaths and Pneumonia deaths.
+
+## CONCLUSION
+
+This study set out to answer the question of how mortality rates for COVID-19, pneumonia, and their combination evolved across different time periods, specifically before the vaccine (prior to December 2020), after the introduction of the vaccine and before the first booster (December 2020 - October 2021), after the introduction of the vaccine and before the second booster (October 2021 - April 2022), and after the second booster (April 2022-present). The findings offer valuable insights into the impact of vaccination strategies on mortality rates during the COVID-19 pandemic.\
+\
+The results clearly demonstrate a significant shift in mortality rates over time, reflecting the changing dynamics of the pandemic:\
+\
+1. Initial Surge After Vaccine Availability: The initial availability of the COVID-19 vaccine was accompanied by a substantial spike in mortality rates. This surge can be attributed to the complex transition period when vaccines were introduced, and challenges related to distribution and access were prevalent.\
+\
+2. Impact of Booster Shots: The most striking observation was the consistent reduction in mortality rates after the administration of subsequent booster shots. Whether it was the first or second booster, these additional doses were associated with a substantial decline in mortality for COVID-19, pneumonia, and the combined incidence of both. This outcome underscores the importance of booster shots in strengthening immunity and reducing severe outcomes.\
+\
+In conclusion, this study provides compelling evidence that the implementation of vaccination and booster programs played a pivotal role in reducing mortality rates associated with COVID-19, pneumonia, and their combined impact. It effectively answers the research question by highlighting the pivotal role of vaccination in mitigating the pandemic's effects and the remarkable effect of booster doses in enhancing protection over time.\
+\
+These findings underscore the critical importance of continued vaccination efforts, strategic booster administration, and adaptable public health policies in managing and ultimately overcoming the COVID-19 pandemic. Moreover, they emphasize the need for ongoing research to further understand the factors contributing to these trends and to adapt public health strategies accordingly.
