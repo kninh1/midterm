@@ -8,9 +8,16 @@ format:
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
-install.packages("rgeos")
+##install.packages("rgeos")
 
-install.packages("maptools")
+##install.packages("maptools")
+
+##install.packages("devtools")
+
+library(devtools)
+
+##install_github("apwheele/ptools")
+
 
 #Load necessary libraries
 
