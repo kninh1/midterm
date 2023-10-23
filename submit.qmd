@@ -368,14 +368,14 @@ ThreeDeaths_Data <- GroupBy_Month_Data[,c("YearMonth", "COVIDDeaths", "Pneumonia
 
 ##ThreeDeaths_Data.plot.bar(x='YearMonth', stacked=True, title='The number of Deaths: Covid, Pneumonia, CovidAndPneumonia')
 
-library(plotly)
+##library(plotly)
 
-fig <- plot_ly(ThreeDeaths_Data, x = ~YearMonth, y = ~COVIDDeaths, type = 'bar', name = 'COVIDDeaths')
-fig <- fig %>% add_trace(y = ~PneumoniaDeaths, name = 'PneumoniaDeaths')
-fig <- fig %>% add_trace(y = ~PneumoniaAndCovidDeaths, name = 'PneumoniaAndCovidDeaths')
-fig <- fig %>% layout(yaxis = list(title = 'Count'), barmode = 'stack')
+##fig <- plot_ly(ThreeDeaths_Data, x = ~YearMonth, y = ~COVIDDeaths, type = 'bar', name = 'COVIDDeaths')
+##fig <- fig %>% add_trace(y = ~PneumoniaDeaths, name = 'PneumoniaDeaths')
+##fig <- fig %>% add_trace(y = ~PneumoniaAndCovidDeaths, name = 'PneumoniaAndCovidDeaths')
+##fig <- fig %>% layout(yaxis = list(title = 'Count'), barmode = 'stack')
 
-fig
+##fig
 
 ```
 
