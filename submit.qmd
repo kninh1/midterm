@@ -8,6 +8,10 @@ format:
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
+install.packages("rgeos")
+
+install.packages("maptools")
+
 #Load necessary libraries
 
 library(tidyverse)
