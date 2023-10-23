@@ -8,17 +8,6 @@ format:
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
-##install.packages("rgeos")
-
-##install.packages("maptools")
-
-##install.packages("devtools")
-
-library(devtools)
-
-##install_github("apwheele/ptools")
-
-
 #Load necessary libraries
 
 library(tidyverse)
@@ -365,6 +354,7 @@ Notice: One would expect that the second period - from the time the vaccination 
 
 ThreeDeaths_Data <- GroupBy_Month_Data[,c("YearMonth", "COVIDDeaths", "PneumoniaDeaths", "PneumoniaAndCovidDeaths")]
 
+ThreeDeaths_Data
 
 ##ThreeDeaths_Data.plot.bar(x='YearMonth', stacked=True, title='The number of Deaths: Covid, Pneumonia, CovidAndPneumonia')
 
